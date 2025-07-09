@@ -1,1804 +1,1211 @@
-<div id="photo1-preview" class="hidden">
-                                    <img id="photo1-img" class="photo-preview">
-                                    <div class="photo-name" id="photo1-name"></div>
-                                    <button onclick="removePhoto(1)" class="btn" style="background: #dc2626; color: white; width: auto; padding: 8px 16px; font-size: 12px;">Remove</button>
-                                </div>
-                                <div id="photo1-input">
-                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-                                        <button onclick="capturePhoto(1)" class="btn btn-primary" style="padding: 12px; font-size: 14px;">📷 Camera</button>
-                                        <button onclick="selectPhoto(1)" class="btn" style="background: #6b7280; color: white; padding: 12px; font-size: 14px;">📁 Gallery</button>
-                                    </div>
-                                    <input type="file" id="photo1-camera" accept="image/*" capture="environment" style="display: none;" onchange="handlePhoto(1, this)">
-                                    <input type="file" id="photo1-gallery" accept="image/*" style="display: none;" onchange="handlePhoto(1, this)">
-                                </div>
-                            </div>
-                            
-                            <div class="photo-section">
-                                <label class="form-label">After Photo</label>
-                                <div id="photo2-preview" class="hidden">
-                                    <img id="photo2-img" class="photo-preview">
-                                    <div class="photo-name" id="photo2-name"></div>
-                                    <button onclick="removePhoto(2)" class="btn" style="background: #dc2626; color: white; width: auto; padding: 8px 16px; font-size: 12px;">Remove</button>
-                                </div>
-                                <div id="photo2-input">
-                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-                                        <button onclick="capturePhoto(2)" class="btn btn-primary" style="padding: 12px; font-size: 14px;">📷 Camera</button>
-                                        <button onclick="selectPhoto(2)" class="btn" style="background: #6b7280; color: white; padding: 12px; font-size: 14px;">📁 Gallery</button>
-                                    </div>
-                                    <input type="file" id="photo2-camera" accept="image/*" capture="environment" style="display: none;" onchange="handlePhoto(2, this)">
-                                    <input type="file" id="photo2-gallery" accept="image/*" style="display: none;" onchange="handlePhoto(2, this)">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+import React, { useState, useEffect } from 'react';
 
-                <!-- Remarks Section -->
-                <div class="section">
-                    <div class="section-header" onclick="toggleSection('remarks')">
-                        <span>💬 Remarks</span>
-                        <span class="section-toggle" id="remarks-toggle">▼</span>
-                    </div>
-                    <div class="section-content" id="remarks-content">
-                        <div class="form-group">
-                            <label class="form-label">Safety Notes</label>
-                            <textarea id="activity-safety-remarks" placeholder="Safety observations for this activity..." rows="2" class="form-textarea"></textarea>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">General Remarks</label>
-                            <textarea id="activity-general-remarks" placeholder="Other notes and observations..." rows="2" class="form-textarea"></textarea>
-                        </div>
-                    </div>
-                </div>
+const DailySiteReport = () => {
+  // State management
+  const [activeTab, setActiveTab] = useState('activity');
+  const [expandedSections, setExpandedSections] = useState({
+    overview: true,
+    'activity-details': true,
+    'work-details': true,
+    manpower: false,
+    materials: false,
+    photos: false,
+    remarks: false
+  });
+  
+  const [dailyActivities, setDailyActivities] = useState([]);
+  const [photos, setPhotos] = useState({ 1: null, 2: null });
+  const [message, setMessage] = useState({ text: '', type: '' });
+  const [currentTime, setCurrentTime] = useState(new Date());
 
-                <!-- Add Activity Button -->
-                <button onclick="addActivity()" class="btn btn-success" style="margin-top: 20px;">➕ Add Activity to Report</button>
-                
-                <div id="activity-message"></div>
-            </div>
+  // Form data states
+  const [overviewData, setOverviewData] = useState({
+    projectName: '',
+    customProjectName: '',
+    reportedBy: '',
+    weatherCondition: '',
+    siteConditions: ''
+  });
 
-            <!-- Safety Tab -->
-            <div id="safety-content" class="tab-content">
-                <div class="card">
-                    <h3>🛡️ Daily Safety Status</h3>
-                    <div class="form-group">
-                        <label class="form-label">Overall Safety Status</label>
-                        <select id="safety-status" class="form-select">
-                            <option value="">Select Status</option>
-                            <option value="Excellent">🟢 Excellent - No Issues</option>
-                            <option value="Good">🟡 Good - Minor Issues</option>
-                            <option value="Fair">🟠 Fair - Some Concerns</option>
-                            <option value="Poor">🔴 Poor - Major Issues</option>
-                        </select>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label class="form-label">Safety Officer Present</label>
-                            <select id="safety-officer" class="form-select">
-                                <option value="">Select</option>
-                                <option value="Full Day">Yes - Full Day</option>
-                                <option value="Partial Day">Yes - Partial Day</option>
-                                <option value="Not Present">No - Not Present</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">PPE Compliance</label>
-                            <select id="ppe-compliance" class="form-select">
-                                <option value="">Select Compliance</option>
-                                <option value="100%">100% Compliant</option>
-                                <option value="95%">95% Compliant</option>
-                                <option value="90%">90% Compliant</option>
-                                <option value="Below 90%">Below 90%</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Safety Observations</label>
-                        <textarea id="safety-observations" placeholder="Safety incidents, observations, actions taken..." rows="3" class="form-textarea"></textarea>
-                    </div>
-                </div>
-            </div>
+  const [activityData, setActivityData] = useState({
+    startTime: '',
+    endTime: '',
+    location: '',
+    specificArea: '',
+    locationDetails: '',
+    contractor: '',
+    workCategory: '',
+    workType: '',
+    workDescription: '',
+    workStatus: '',
+    qualityStatus: '',
+    workerCount: '',
+    supervisorCount: '',
+    specialistCount: '',
+    equipmentUsed: '',
+    equipmentCount: '',
+    equipmentDetails: '',
+    materialType: '',
+    materialDetails: '',
+    activitySafetyRemarks: '',
+    activityGeneralRemarks: ''
+  });
 
-            <!-- Progress Tab -->
-            <div id="progress-content" class="tab-content">
-                <div class="card">
-                    <h3>📈 Daily Progress</h3>
-                    <div class="form-group">
-                        <label class="form-label">Progress Rating</label>
-                        <select id="progress-rating" class="form-select">
-                            <option value="">Rate Today's Progress</option>
-                            <option value="Excellent">🟢 Excellent - Ahead of Schedule</option>
-                            <option value="Good">🟡 Good - On Schedule</option>
-                            <option value="Fair">🟠 Fair - Minor Delays</option>
-                            <option value="Poor">🔴 Poor - Behind Schedule</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Key Achievements</label>
-                        <textarea id="key-achievements" placeholder="Major achievements and milestones..." rows="3" class="form-textarea"></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Issues & Challenges</label>
-                        <textarea id="issues-challenges" placeholder="Problems encountered and solutions..." rows="3" class="form-textarea"></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Tomorrow's Plan</label>
-                        <textarea id="tomorrow-plan" placeholder="Planned activities for tomorrow..." rows="2" class="form-textarea"></textarea>
-                    </div>
-                </div>
+  const [safetyData, setSafetyData] = useState({
+    safetyStatus: '',
+    safetyOfficer: '',
+    ppeCompliance: '',
+    safetyObservations: '',
+    nearMissedIssues: '',
+    linkedActivity: ''
+  });
 
-                <div class="card">
-                    <h3>🔍 Quality Control</h3>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label class="form-label">Overall Quality</label>
-                            <select id="overall-quality" class="form-select">
-                                <option value="">Select Quality</option>
-                                <option value="Excellent">🟢 Excellent</option>
-                                <option value="Good">🟡 Good</option>
-                                <option value="Acceptable">🟠 Acceptable</option>
-                                <option value="Poor">🔴 Poor</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Rework Required</label>
-                            <select id="rework-required" class="form-select">
-                                <option value="">Select Status</option>
-                                <option value="No Rework">No Rework Required</option>
-                                <option value="Minor Rework">Minor Rework Required</option>
-                                <option value="Major Rework">Major Rework Required</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Quality Issues</label>
-                        <textarea id="quality-issues" placeholder="Quality problems and corrective actions..." rows="2" class="form-textarea"></textarea>
-                    </div>
-                </div>
-            </div>
+  // Work type mappings
+  const workTypeMap = {
+    'Structural': ['Concrete Pouring', 'Reinforcement Installation', 'Formwork Setup', 'Steel Erection', 'Foundation Work'],
+    'Mechanical': ['Pipe Installation', 'Valve Installation', 'Pump Installation', 'Equipment Mounting', 'Pressure Testing'],
+    'Electrical': ['Cable Installation', 'Panel Installation', 'Lighting Installation', 'Testing & Commissioning'],
+    'Plumbing': ['Water Pipe Installation', 'Drainage Installation', 'Fixture Installation', 'Leak Repairs'],
+    'HVAC': ['Ductwork Installation', 'AC Unit Installation', 'Ventilation Setup', 'System Testing'],
+    'Fire Safety': ['Sprinkler Installation', 'Fire Alarm Setup', 'Smoke Detector Installation', 'System Testing'],
+    'Finishes': ['Painting', 'Tiling', 'Flooring Installation', 'Door Installation', 'Window Installation'],
+    'Landscaping': ['Excavation', 'Planting', 'Irrigation Setup', 'Paving', 'Site Cleanup'],
+    'Testing': ['Quality Inspections', 'Safety Testing', 'Performance Testing', 'Final Inspections'],
+    'Maintenance': ['Routine Maintenance', 'Repair Work', 'Equipment Service', 'Cleaning']
+  };
 
-            <!-- Report Tab -->
-            <div id="report-content" class="tab-content">
-                <div class="card">
-                    <h3>📊 Daily Summary</h3>
-                    <div class="summary-grid">
-                        <div class="summary-item">
-                            <div class="summary-number" id="total-activities">0</div>
-                            <div class="summary-label">Activities</div>
-                        </div>
-                        <div class="summary-item">
-                            <div class="summary-number" id="total-workers">0</div>
-                            <div class="summary-label">Workers</div>
-                        </div>
-                        <div class="summary-item">
-                            <div class="summary-number" id="active-contractors">0</div>
-                            <div class="summary-label">Contractors</div>
-                        </div>
-                        <div class="summary-item">
-                            <div class="summary-number" id="work-hours">0</div>
-                            <div class="summary-label">Work Hours</div>
-                        </div>
-                    </div>
-                </div>
+  // Generate time options (only :00 and :30)
+  const generateTimeOptions = () => {
+    const times = [];
+    for (let hour = 0; hour < 24; hour++) {
+      const hourStr = hour.toString().padStart(2, '0');
+      times.push(`${hourStr}:00`);
+      times.push(`${hourStr}:30`);
+    }
+    return times;
+  };
 
-                <div class="card">
-                    <h3>📝 Activities Review</h3>
-                    <div id="activities-review">
-                        <div class="text-center" style="padding: 40px; color: #6b7280;">
-                            <div style="font-size: 48px; margin-bottom: 16px;">📝</div>
-                            <p>No activities recorded yet.<br>Add activities in the Activity tab first.</p>
-                        </div>
-                    </div>
-                </div>
+  const timeOptions = generateTimeOptions();
 
-                <div class="card">
-                    <h3>📤 Export Report</h3>
-                    <div class="form-group">
-                        <button onclick="downloadCSV()" class="btn btn-success" id="download-csv-btn" disabled>
-                            ⬇️ Download CSV Report
-                        </button>
-                    </div>
-                    <div class="form-group">
-                        <button onclick="previewReport()" class="btn btn-primary" id="preview-btn" disabled>
-                            👁️ Preview Report
-                        </button>
-                    </div>
-                    <p id="export-status" class="text-center" style="color: #6b7280; margin-top: 12px; font-size: 14px;">
-                        Add activities to enable export
-                    </p>
-                    <div class="info-message">
-                        <strong>💡 How to use:</strong><br>
-                        1. Download CSV file to your phone<br>
-                        2. Share via WhatsApp/Email to your computer<br>
-                        3. Open in Excel for further processing
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        // Global variables
-        let dailyActivities = [];
-        let photos = {1: null, 2: null};
-
-        // Work type mappings
-        const workTypeMap = {
-            'Structural': ['Concrete Pouring', 'Reinforcement Installation', 'Formwork Setup', 'Steel Erection', 'Foundation Work'],
-            'Mechanical': ['Pipe Installation', 'Valve Installation', 'Pump Installation', 'Equipment Mounting', 'Pressure Testing'],
-            'Electrical': ['Cable Installation', 'Panel Installation', 'Lighting Installation', 'Testing & Commissioning'],
-            'Plumbing': ['Water Pipe Installation', 'Drainage Installation', 'Fixture Installation', 'Leak Repairs'],
-            'HVAC': ['Ductwork Installation', 'AC Unit Installation', 'Ventilation Setup', 'System Testing'],
-            'Fire Safety': ['Sprinkler Installation', 'Fire Alarm Setup', 'Smoke Detector Installation', 'System Testing'],
-            'Finishes': ['Painting', 'Tiling', 'Flooring Installation', 'Door Installation', 'Window Installation'],
-            'Landscaping': ['Excavation', 'Planting', 'Irrigation Setup', 'Paving', 'Site Cleanup'],
-            'Testing': ['Quality Inspections', 'Safety Testing', 'Performance Testing', 'Final Inspections'],
-            'Maintenance': ['Routine Maintenance', 'Repair Work', 'Equipment Service', 'Cleaning']
-        };
-
-        // Initialize app
-        function init() {
-            console.log('Initializing Daily Site Report System...');
-            
-            try {
-                // Set current time
-                const now = new Date();
-                const timeString = now.toTimeString().slice(0, 5);
-                document.getElementById('activity-start-time').value = timeString;
-                
-                // Update date/time display
-                updateDateTime();
-                setInterval(updateDateTime, 1000);
-                
-                // Auto-save every 2 minutes
-                setInterval(autoSave, 2 * 60 * 1000);
-                
-                // Load any saved data
-                loadDailyData();
-                
-                console.log('App initialized successfully');
-            } catch (error) {
-                console.error('Initialization error:', error);
-            }
-        }
-
-        // Update date and time display
-        function updateDateTime() {
-            try {
-                const now = new Date();
-                const dateEl = document.getElementById('current-date');
-                const timeEl = document.getElementById('current-time');
-                
-                if (dateEl) dateEl.textContent = now.toLocaleDateString();
-                if (timeEl) timeEl.textContent = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-            } catch (error) {
-                console.warn('DateTime update failed:', error);
-            }
-        }
-
-        // Tab navigation
-        function showTab(tabName, element) {
-            try {
-                // Hide all tab contents
-                document.querySelectorAll('.tab-content').forEach(content => {
-                    content.classList.remove('active');
-                });
-                
-                // Remove active class from all tabs
-                document.querySelectorAll('.tab').forEach(tab => {
-                    tab.classList.remove('active');
-                });
-                
-                // Show selected tab content
-                const targetContent = document.getElementById(tabName + '-content');
-                if (targetContent) {
-                    targetContent.classList.add('active');
-                }
-                
-                // Add active class to clicked tab
-                if (element) {
-                    element.classList.add('active');
-                }
-            } catch (error) {
-                console.error('Tab switching error:', error);
-            }
-        }
-
-        // Toggle collapsible sections
-        function toggleSection(sectionName) {
-            try {
-                const content = document.getElementById(sectionName + '-content');
-                const toggle = document.getElementById(sectionName + '-toggle');
-                
-                if (content && toggle) {
-                    if (content.classList.contains('active')) {
-                        content.classList.remove('active');
-                        toggle.classList.remove('rotated');
-                    } else {
-                        content.classList.add('active');
-                        toggle.classList.add('rotated');
-                    }
-                }
-            } catch (error) {
-                console.error('Section toggle error:', error);
-            }
-        }
-
-        // Handle project change
-        function handleProjectChange() {
-            try {
-                const projectSelect = document.getElementById('project-name');
-                const customGroup = document.getElementById('custom-project-group');
-                
-                if (projectSelect.value === 'Custom Project') {
-                    customGroup.classList.remove('hidden');
-                } else {
-                    customGroup.classList.add('hidden');
-                    document.getElementById('custom-project-name').value = '';
-                }
-            } catch (error) {
-                console.error('Project change error:', error);
-            }
-        }
-
-        // Update work types based on category
-        function updateWorkTypes() {
-            try {
-                const category = document.getElementById('work-category').value;
-                const workTypeSelect = document.getElementById('work-type');
-                
-                // Clear current options
-                workTypeSelect.innerHTML = '<option value="">Select Work Type</option>';
-                
-                if (category && workTypeMap[category]) {
-                    workTypeMap[category].forEach(type => {
-                        const option = document.createElement('option');
-                        option.value = type;
-                        option.textContent = type;
-                        workTypeSelect.appendChild(option);
-                    });
-                }
-            } catch (error) {
-                console.error('Update work types error:', error);
-            }
-        }
-
-        // Photo functions
-        function capturePhoto(photoNum) {
-            try {
-                document.getElementById(`photo${photoNum}-camera`).click();
-            } catch (error) {
-                console.error('Camera capture error:', error);
-                showMessage('❌ Camera access failed. Try gallery instead.', 'error');
-            }
-        }
-
-        function selectPhoto(photoNum) {
-            try {
-                document.getElementById(`photo${photoNum}-gallery`).click();
-            } catch (error) {
-                console.error('Gallery selection error:', error);
-            }
-        }
-
-        function handlePhoto(photoNum, input) {
-            try {
-                const file = input.files[0];
-                if (!file) return;
-                
-                if (file.size > 5 * 1024 * 1024) {
-                    showMessage('❌ Photo too large. Max 5MB allowed.', 'error');
-                    return;
-                }
-                
-                if (!file.type.startsWith('image/')) {
-                    showMessage('❌ Please select a valid image file.', 'error');
-                    return;
-                }
-                
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    try {
-                        photos[photoNum] = {
-                            data: e.target.result,
-                            name: file.name
-                        };
-                        
-                        // Show preview
-                        document.getElementById(`photo${photoNum}-img`).src = e.target.result;
-                        document.getElementById(`photo${photoNum}-name`).textContent = file.name;
-                        document.getElementById(`photo${photoNum}-preview`).classList.remove('hidden');
-                        document.getElementById(`photo${photoNum}-input`).classList.add('hidden');
-                        
-                        showMessage(`✅ Photo ${photoNum} uploaded!`, 'success');
-                    } catch (error) {
-                        console.error('Photo preview error:', error);
-                        showMessage('❌ Photo preview failed.', 'error');
-                    }
-                };
-                
-                reader.readAsDataURL(file);
-            } catch (error) {
-                console.error('Photo handling error:', error);
-                showMessage('❌ Photo upload failed.', 'error');
-            }
-        }
-
-        function removePhoto(photoNum) {
-            try {
-                photos[photoNum] = null;
-                
-                document.getElementById(`photo${photoNum}-preview`).classList.add('hidden');
-                document.getElementById(`photo${photoNum}-input`).classList.remove('hidden');
-                document.getElementById(`photo${photoNum}-camera`).value = '';
-                document.getElementById(`photo${photoNum}-gallery`).value = '';
-                
-                showMessage(`✅ Photo ${photoNum} removed.`, 'success');
-            } catch (error) {
-                console.error('Photo removal error:', error);
-            }
-        }
-
-        // Add activity
-        function addActivity() {
-            try {
-                const startTime = document.getElementById('activity-start-time').value;
-                const location = document.getElementById('location').value;
-                const contractor = document.getElementById('contractor').value;
-                const workCategory = document.getElementById('work-category').value;
-                
-                if (!startTime || !location || !contractor || !workCategory) {
-                    showMessage('❌ Please fill in Start Time, Location, Contractor, and Work Category', 'error');
-                    return;
-                }
-
-                const activity = {
-                    id: Date.now(),
-                    timestamp: new Date().toLocaleString(),
-                    startTime: startTime,
-                    endTime: document.getElementById('activity-end-time').value || '',
-                    location: location,
-                    specificArea: document.getElementById('specific-area').value || '',
-                    locationDetails: document.getElementById('location-details').value || '',
-                    contractor: contractor,
-                    workCategory: workCategory,
-                    workType: document.getElementById('work-type').value || '',
-                    workDescription: document.getElementById('work-description').value || '',
-                    workStatus: document.getElementById('work-status').value || '',
-                    qualityStatus: document.getElementById('quality-status').value || '',
-                    workerCount: document.getElementById('worker-count').value || '',
-                    supervisorCount: document.getElementById('supervisor-count').value || '',
-                    specialistCount: document.getElementById('specialist-count').value || '',
-                    equipmentUsed: document.getElementById('equipment-used').value || '',
-                    equipmentDetails: document.getElementById('equipment-details').value || '',
-                    materialType: document.getElementById('material-type').value || '',
-                    materialDetails: document.getElementById('material-details').value || '',
-                    activitySafetyRemarks: document.getElementById('activity-safety-remarks').value || '',
-                    activityGeneralRemarks: document.getElementById('activity-general-remarks').value || '',
-                    photos: JSON.parse(JSON.stringify(photos))
-                };
-
-                dailyActivities.push(activity);
-                clearActivityForm();
-                updateActivityDisplay();
-                updateSummaryStats();
-                autoSave();
-                
-                showMessage('✅ Activity added successfully!', 'success');
-                
-            } catch (error) {
-                console.error('Add activity error:', error);
-                showMessage('❌ Failed to add activity.', 'error');
-            }
-        }
-
-        // Clear activity form (keep overview data)
-        function clearActivityForm() {
-            try {
-                const fieldsToKeep = ['project-name', 'custom-project-name', 'site-supervisor', 'work-shift', 'weather-condition', 'site-conditions'];
-                
-                const formFields = [
-                    'activity-end-time', 'location', 'specific-area', 'location-details',
-                    'contractor', 'work-category', 'work-type', 'work-description',
-                    'work-status', 'quality-status', 'worker-count', 'supervisor-count',
-                    'specialist-count', 'equipment-used', 'equipment-details',
-                    'material-type', 'material-details',
-                    'activity-safety-remarks', 'activity-general-remarks'
-                ];
-                
-                formFields.forEach(fieldId => {
-                    const field = document.getElementById(fieldId);
-                    if (field) field.value = '';
-                });
-                
-                // Clear photos
-                for (let i = 1; i <= 2; i++) {
-                    removePhoto(i);
-                }
-                
-                // Reset work types
-                document.getElementById('work-type').innerHTML = '<option value="">Select Work Type</option>';
-                
-                // Update start time
-                const now = new Date();
-                document.getElementById('activity-start-time').value = now.toTimeString().slice(0, 5);
-                
-            } catch (error) {
-                console.error('Form clearing error:', error);
-            }
-        }
-
-        // Update activity display
-        function updateActivityDisplay() {
-            try {
-                document.getElementById('activity-count').textContent = dailyActivities.length;
-                
-                const activitiesReview = document.getElementById('activities-review');
-                
-                if (dailyActivities.length === 0) {
-                    activitiesReview.innerHTML = `
-                        <div class="text-center" style="padding: 40px; color: #6b7280;">
-                            <div style="font-size: 48px; margin-bottom: 16px;">📝</div>
-                            <p>No activities recorded yet.<br>Add activities in the Activity tab first.</p>
-                        </div>
-                    `;
-                } else {
-                    activitiesReview.innerHTML = dailyActivities.map((activity, index) => `
-                        <div class="activity-entry">
-                            <div class="activity-header">
-                                <div class="activity-time">${activity.startTime}${activity.endTime ? ' - ' + activity.endTime : ''}</div>
-                                <button class="activity-delete" onclick="deleteActivity(${index})">🗑️</button>
-                            </div>
-                            <div class="activity-details">
-                                <div><strong>📍</strong> ${activity.location}${activity.specificArea ? ' - ' + activity.specificArea : ''}</div>
-                                <div><strong>👷</strong> ${activity.contractor}</div>
-                                <div><strong>🔧</strong> ${activity.workCategory}${activity.workType ? ' - ' + activity.workType : ''}</div>
-                                ${activity.workDescription ? `<div><strong>📝</strong> ${activity.workDescription}</div>` : ''}
-                                ${activity.workerCount ? `<div><strong>👥</strong> ${activity.workerCount} workers</div>` : ''}
-                                ${activity.materialType ? `<div><strong>📦</strong> ${activity.materialType}</div>` : ''}
-                                ${activity.workStatus ? `<div><strong>📊</strong> ${activity.workStatus}</div>` : ''}
-                                ${getActivityPhotosHTML(activity.photos)}
-                            </div>
-                        </div>
-                    `).join('');
-                }
-            } catch (error) {
-                console.error('Activity display error:', error);
-            }
-        }
-
-        // Get photos HTML for display
-        function getActivityPhotosHTML(activityPhotos) {
-            try {
-                const photoElements = [];
-                for (let i = 1; i <= 2; i++) {
-                    if (activityPhotos && activityPhotos[i] && activityPhotos[i].data) {
-                        photoElements.push(`<img src="${activityPhotos[i].data}" alt="Photo ${i}" class="activity-photo">`);
-                    }
-                }
-                
-                if (photoElements.length > 0) {
-                    return `<div class="activity-photos">${photoElements.join('')}</div>`;
-                }
-                return '';
-            } catch (error) {
-                console.error('Activity photos HTML error:', error);
-                return '';
-            }
-        }
-
-        // Delete activity
-        function deleteActivity(index) {
-            try {
-                if (confirm('❌ Delete this activity?')) {
-                    dailyActivities.splice(index, 1);
-                    updateActivityDisplay();
-                    updateSummaryStats();
-                    autoSave();
-                    showMessage('✅ Activity deleted.', 'success');
-                }
-            } catch (error) {
-                console.error('Delete activity error:', error);
-            }
-        }
-
-        // Update summary statistics
-        function updateSummaryStats() {
-            try {
-                const totalActivities = dailyActivities.length;
-                const totalWorkers = dailyActivities.reduce((sum, activity) => {
-                    return sum + (parseInt(activity.workerCount) || 0) + (parseInt(activity.supervisorCount) || 0) + (parseInt(activity.specialistCount) || 0);
-                }, 0);
-                const activeContractors = [...new Set(dailyActivities.map(a => a.contractor).filter(c => c))].length;
-                
-                // Calculate work hours
-                let totalHours = 0;
-                dailyActivities.forEach(activity => {
-                    if (activity.startTime && activity.endTime) {
-                        const start = new Date(`2000-01-01T${activity.startTime}`);
-                        const end = new Date(`2000-01-01T${activity.endTime}`);
-                        const hours = (end - start) / (1000 * 60 * 60);
-                        if (hours > 0) totalHours += hours;
-                    }
-                });
-                
-                // Update display
-                document.getElementById('total-activities').textContent = totalActivities;
-                document.getElementById('total-workers').textContent = totalWorkers;
-                document.getElementById('active-contractors').textContent = activeContractors;
-                document.getElementById('work-hours').textContent = Math.round(totalHours * 10) / 10;
-                
-                // Update buttons
-                const hasActivities = totalActivities > 0;
-                document.getElementById('download-csv-btn').disabled = !hasActivities;
-                document.getElementById('preview-btn').disabled = !hasActivities;
-                
-                document.getElementById('export-status').textContent = hasActivities ? 'Ready to export' : 'Add activities to enable export';
-                
-                // Update report status
-                document.getElementById('report-status').textContent = 
-                    totalActivities === 0 ? '🟡 In Progress' : 
-                    totalActivities < 3 ? '🟠 Partial' : '🟢 Ready';
-                
-            } catch (error) {
-                console.error('Summary stats update error:', error);
-            }
-        }
-
-        // Show message
-        function showMessage(message, type) {
-            try {
-                const messageDiv = document.getElementById('activity-message');
-                if (messageDiv) {
-                    messageDiv.className = type === 'success' ? 'success-message' : 'error-message';
-                    messageDiv.textContent = message;
-                    
-                    setTimeout(() => {
-                        messageDiv.textContent = '';
-                        messageDiv.className = '';
-                    }, 4000);
-                }
-            } catch (error) {
-                console.error('Message display error:', error);
-            }
-        }
-
-        // Generate CSV
-        function generateCSV() {
-            try {
-                const headers = [
-                    'Date', 'Project', 'Supervisor', 'Shift', 'Weather', 'Site Conditions',
-                    'Start Time', 'End Time', 'Location', 'Area', 'Location Details',
-                    'Contractor', 'Work Category', 'Work Type', 'Description', 'Status', 'Quality',
-                    'Workers', 'Supervisors', 'Specialists', 'Equipment', 'Equipment Details',
-                    'Material Type', 'Material Details', 'Safety Remarks', 'General Remarks',
-                    'Photo 1', 'Photo 2', 'Timestamp'
-                ];
-                
-                const projectSelect = document.getElementById('project-name').value;
-                const customProject = document.getElementById('custom-project-name').value;
-                const finalProject = projectSelect === 'Custom Project' ? customProject : projectSelect;
-                
-                const csvRows = dailyActivities.map(activity => [
-                    new Date().toLocaleDateString(),
-                    `"${finalProject || ''}"`,
-                    `"${document.getElementById('site-supervisor').value || ''}"`,
-                    `"${document.getElementById('work-shift').value || ''}"`,
-                    `"${document.getElementById('weather-condition').value || ''}"`,
-                    `"${document.getElementById('site-conditions').value || ''}"`,
-                    activity.startTime || '',
-                    activity.endTime || '',
-                    `"${activity.location || ''}"`,
-                    `"${activity.specificArea || ''}"`,
-                    `"${activity.locationDetails || ''}"`,
-                    `"${activity.contractor || ''}"`,
-                    `"${activity.workCategory || ''}"`,
-                    `"${activity.workType || ''}"`,
-                    `"${(activity.workDescription || '').replace(/"/g, '""')}"`,
-                    `"${activity.workStatus || ''}"`,
-                    `"${activity.qualityStatus || ''}"`,
-                    activity.workerCount || '',
-                    activity.supervisorCount || '',
-                    activity.specialistCount || '',
-                    `"${activity.equipmentUsed || ''}"`,
-                    `"${(activity.equipmentDetails || '').replace(/"/g, '""')}"`,
-                    `"${activity.materialType || ''}"`,
-                    `"${(activity.materialDetails || '').replace(/"/g, '""')}"`,
-                    `"${(activity.activitySafetyRemarks || '').replace(/"/g, '""')}"`,
-                    `"${(activity.activityGeneralRemarks || '').replace(/"/g, '""')}"`,
-                    `"${(activity.photos && activity.photos[1] ? activity.photos[1].name : '')}"`,
-                    `"${(activity.photos && activity.photos[2] ? activity.photos[2].name : '')}"`,
-                    `"${activity.timestamp || ''}"`
-                ].join(','));
-                
-                return [headers.join(','), ...csvRows].join('\n');
-            } catch (error) {
-                console.error('CSV generation error:', error);
-                throw new Error('Failed to generate CSV');
-            }
-        }
-
-        // Download CSV
-        function downloadCSV() {
-            try {
-                if (dailyActivities.length === 0) {
-                    showMessage('❌ No activities to export.', 'error');
-                    return;
-                }
-                
-                const csvContent = generateCSV();
-                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-                const link = document.createElement('a');
-                const url = URL.createObjectURL(blob);
-                
-                const today = new Date().toISOString().split('T')[0];
-                const projectSelect = document.getElementById('project-name').value;
-                const customProject = document.getElementById('custom-project-name').value;
-                const finalProject = projectSelect === 'Custom Project' ? customProject : projectSelect;
-                const projectName = (finalProject || 'Project').replace(/\s+/g, '_');
-                
-                const fileName = `Daily_Site_Report_${projectName}_${today}.csv`;
-                
-                link.setAttribute('href', url);
-                link.setAttribute('download', fileName);
-                link.style.visibility = 'hidden';
-                
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                
-                setTimeout(() => URL.revokeObjectURL(url), 1000);
-                
-                showMessage('✅ CSV downloaded! Share it via your phone.', 'success');
-            } catch (error) {
-                console.error('CSV download error:', error);
-                showMessage('❌ CSV export failed.', 'error');
-            }
-        }
-
-        // Preview report
-        function previewReport() {
-            try {
-                if (dailyActivities.length === 0) {
-                    showMessage('❌ No activities to preview.', 'error');
-                    return;
-                }
-                
-                // Create preview content
-                const today = new Date().toLocaleDateString();
-                const projectSelect = document.getElementById('project-name').value;
-                const customProject = document.getElementById('custom-project-name').value;
-                const finalProject = projectSelect === 'Custom Project' ? customProject : projectSelect;
-                
-                const siteSupervisor = document.getElementById('site-supervisor').value || 'Not specified';
-                const workShift = document.getElementById('work-shift').value || 'Not specified';
-                const weatherCondition = document.getElementById('weather-condition').value || 'Not specified';
-                
-                const totalWorkers = dailyActivities.reduce((sum, activity) => {
-                    return sum + (parseInt(activity.workerCount) || 0) + (parseInt(activity.supervisorCount) || 0) + (parseInt(activity.specialistCount) || 0);
-                }, 0);
-                
-                const contractors = [...new Set(dailyActivities.map(a => a.contractor).filter(c => c))];
-                
-                // Generate simple preview HTML
-                let previewHTML = `
-                    <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto;">
-                        <div style="text-align: center; border-bottom: 2px solid #333; padding-bottom: 20px; margin-bottom: 30px;">
-                            <h1>🏗️ DAILY SITE REPORT</h1>
-                            <h2>${finalProject || 'Construction Project'}</h2>
-                            <p><strong>Date:</strong> ${today}</p>
-                            <p><strong>Supervisor:</strong> ${siteSupervisor} | <strong>Shift:</strong> ${workShift}</p>
-                            <p><strong>Weather:</strong> ${weatherCondition}</p>
-                        </div>
-                        
-                        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 20px 0;">
-                            <h3>📈 Daily Summary</h3>
-                            <p><strong>Total Activities:</strong> ${dailyActivities.length}</p>
-                            <p><strong>Total Workers:</strong> ${totalWorkers}</p>
-                            <p><strong>Active Contractors:</strong> ${contractors.length}</p>
-                            <p><strong>Contractors:</strong> ${contractors.join(', ')}</p>
-                        </div>
-                        
-                        <h3>📝 Daily Activities</h3>
-                `;
-                
-                dailyActivities.forEach((activity, index) => {
-                    previewHTML += `
-                        <div style="border: 1px solid #ddd; padding: 15px; margin: 15px 0; border-radius: 8px;">
-                            <div style="font-weight: bold; color: #1e40af; margin-bottom: 10px;">
-                                Activity #${index + 1} - ${activity.startTime}${activity.endTime ? ' to ' + activity.endTime : ''}
-                            </div>
-                            <p><strong>Location:</strong> ${activity.location}${activity.specificArea ? ' - ' + activity.specificArea : ''}</p>
-                            <p><strong>Contractor:</strong> ${activity.contractor}</p>
-                            <p><strong>Work Type:</strong> ${activity.workCategory}${activity.workType ? ' - ' + activity.workType : ''}</p>
-                            ${activity.workDescription ? `<p><strong>Description:</strong> ${activity.workDescription}</p>` : ''}
-                            ${activity.workerCount ? `<p><strong>Workers:</strong> ${activity.workerCount}${activity.supervisorCount ? ' + ' + activity.supervisorCount + ' supervisors' : ''}${activity.specialistCount ? ' + ' + activity.specialistCount + ' specialists' : ''}</p>` : ''}
-                            ${activity.materialType ? `<p><strong>Materials:</strong> ${activity.materialType}</p>` : ''}
-                            ${activity.workStatus ? `<p><strong>Status:</strong> ${activity.workStatus}</p>` : ''}
-                            ${activity.qualityStatus ? `<p><strong>Quality:</strong> ${activity.qualityStatus}</p>` : ''}
-                            ${activity.equipmentUsed ? `<p><strong>Equipment:</strong> ${activity.equipmentUsed}</p>` : ''}
-                            ${activity.activitySafetyRemarks ? `<p><strong>Safety Notes:</strong> ${activity.activitySafetyRemarks}</p>` : ''}
-                            ${activity.activityGeneralRemarks ? `<p><strong>Remarks:</strong> ${activity.activityGeneralRemarks}</p>` : ''}
-                        </div>
-                    `;
-                });
-                
-                previewHTML += `
-                        <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; color: #666;">
-                            <p>Report generated on ${new Date().toLocaleString()}</p>
-                            <button onclick="window.print()" style="background: #1e40af; color: white; padding: 10px 20px; border: none; border-radius: 5px; margin: 5px;">🖨️ Print</button>
-                            <button onclick="window.close()" style="background: #6b7280; color: white; padding: 10px 20px; border: none; border-radius: 5px; margin: 5px;">❌ Close</button>
-                        </div>
-                    </div>
-                `;
-                
-                // Try to open in new window
-                try {
-                    const previewWindow = window.open('', '_blank', 'width=800,height=600,scrollbars=yes');
-                    if (previewWindow) {
-                        previewWindow.document.open();
-                        previewWindow.document.write('<!DOCTYPE html><html><head><title>Report Preview</title></head><body>' + previewHTML + '</body></html>');
-                        previewWindow.document.close();
-                        showMessage('✅ Preview opened in new window', 'success');
-                    } else {
-                        // If popup blocked, show preview in current page
-                        showInlinePreview(previewHTML);
-                    }
-                } catch (error) {
-                    console.error('Preview window error:', error);
-                    showInlinePreview(previewHTML);
-                }
-                
-            } catch (error) {
-                console.error('Preview report error:', error);
-                showMessage('❌ Preview failed. Try CSV download instead.', 'error');
-            }
-        }
-
-        // Show preview inline if popup blocked
-        function showInlinePreview(previewHTML) {
-            try {
-                // Create modal overlay
-                const overlay = document.createElement('div');
-                overlay.style.cssText = `
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 100%;
-                    background: rgba(0,0,0,0.8);
-                    z-index: 10000;
-                    overflow-y: auto;
-                    padding: 20px;
-                `;
-                
-                const modal = document.createElement('div');
-                modal.style.cssText = `
-                    background: white;
-                    max-width: 800px;
-                    margin: 20px auto;
-                    border-radius: 8px;
-                    position: relative;
-                `;
-                
-                const closeBtn = document.createElement('button');
-                closeBtn.textContent = '❌ Close Preview';
-                closeBtn.style.cssText = `
-                    position: absolute;
-                    top: 10px;
-                    right: 10px;
-                    background: #dc2626;
-                    color: white;
-                    border: none;
-                    padding: 8px 16px;
-                    border-radius: 4px;
-                    cursor: pointer;
-                    z-index: 10001;
-                `;
-                
-                closeBtn.onclick = () => document.body.removeChild(overlay);
-                
-                modal.innerHTML = previewHTML;
-                modal.appendChild(closeBtn);
-                overlay.appendChild(modal);
-                document.body.appendChild(overlay);
-                
-                showMessage('✅ Preview shown (popup blocked)', 'success');
-            } catch (error) {
-                console.error('Inline preview error:', error);
-                showMessage('❌ Preview not available. Use CSV download.', 'error');
-            }
-        }
-
-        // Auto-save function
-        function autoSave() {
-            try {
-                if (dailyActivities.length > 0) {
-                    const today = new Date().toISOString().split('T')[0];
-                    const draftData = {
-                        date: today,
-                        dailyActivities: dailyActivities,
-                        overviewData: {
-                            projectName: document.getElementById('project-name').value,
-                            customProjectName: document.getElementById('custom-project-name').value,
-                            siteSupervisor: document.getElementById('site-supervisor').value,
-                            workShift: document.getElementById('work-shift').value,
-                            weatherCondition: document.getElementById('weather-condition').value,
-                            siteConditions: document.getElementById('site-conditions').value
-                        },
-                        savedAt: new Date().toLocaleString()
-                    };
-                    
-                    // Try localStorage first
-                    try {
-                        if (typeof(Storage) !== "undefined" && localStorage) {
-                            localStorage.setItem('dailySiteReportData', JSON.stringify(draftData));
-                        }
-                    } catch (e) {
-                        console.warn('localStorage save failed:', e);
-                    }
-                    
-                    // Try sessionStorage as backup
-                    try {
-                        if (typeof(Storage) !== "undefined" && sessionStorage) {
-                            sessionStorage.setItem('dailySiteReportData', JSON.stringify(draftData));
-                        }
-                    } catch (e) {
-                        console.warn('sessionStorage save failed:', e);
-                    }
-                    
-                    // Always save to global variable
-                    window.dailySiteReportData = draftData;
-                    
-                    // Update last saved time
-                    const lastSaved = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                    document.getElementById('last-saved').textContent = lastSaved;
-                }
-            } catch (error) {
-                console.error('Auto-save error:', error);
-            }
-        }
-
-        // Load daily data
-        function loadDailyData() {
-            try {
-                const today = new Date().toISOString().split('T')[0];
-                let data = null;
-                
-                // Try to load from localStorage first
-                try {
-                    if (typeof(Storage) !== "undefined" && localStorage) {
-                        const stored = localStorage.getItem('dailySiteReportData');
-                        if (stored) {
-                            data = JSON.parse(stored);
-                        }
-                    }
-                } catch (e) {
-                    console.warn('localStorage load failed:', e);
-                }
-                
-                // Try sessionStorage if localStorage failed
-                if (!data) {
-                    try {
-                        if (typeof(Storage) !== "undefined" && sessionStorage) {
-                            const stored = sessionStorage.getItem('dailySiteReportData');
-                            if (stored) {
-                                data = JSON.parse(stored);
-                            }
-                        }
-                    } catch (e) {
-                        console.warn('sessionStorage load failed:', e);
-                    }
-                }
-                
-                // Try global variable as final backup
-                if (!data && window.dailySiteReportData) {
-                    data = window.dailySiteReportData;
-                }
-                
-                if (data && data.date === today) {
-                    // Load activities
-                    if (data.dailyActivities) {
-                        dailyActivities = data.dailyActivities;
-                        updateActivityDisplay();
-                        updateSummaryStats();
-                    }
-                    
-                    // Load overview data
-                    if (data.overviewData) {
-                        const overview = data.overviewData;
-                        if (overview.projectName) document.getElementById('project-name').value = overview.projectName;
-                        if (overview.customProjectName) document.getElementById('custom-project-name').value = overview.customProjectName;
-                        if (overview.siteSupervisor) document.getElementById('site-supervisor').value = overview.siteSupervisor;
-                        if (overview.workShift) document.getElementById('work-shift').value = overview.workShift;
-                        if (overview.weatherCondition) document.getElementById('weather-condition').value = overview.weatherCondition;
-                        if (overview.siteConditions) document.getElementById('site-conditions').value = overview.siteConditions;
-                        
-                        // Handle custom project display
-                        handleProjectChange();
-                    }
-                    
-                    const lastSaved = data.savedAt ? new Date(data.savedAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'Unknown';
-                    document.getElementById('last-saved').textContent = lastSaved;
-                }
-            } catch (error) {
-                console.warn('Load daily data failed:', error);
-            }
-        }
-
-        // Initialize when page loads
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('Loading Daily Site Report System...');
-            init();
-        });
-
-        console.log('Daily Site Report System script loaded');
-    </script>
-</body>
-</html><!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Daily Site Report System</title>
+  // Initialize start time
+  useEffect(() => {
+    const now = new Date();
+    const minutes = now.getMinutes();
+    const roundedMinutes = minutes < 30 ? '00' : '30';
+    const timeString = `${now.getHours().toString().padStart(2, '0')}:${roundedMinutes}`;
     
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
-        }
-        
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background-color: #f8fafc;
-            line-height: 1.5;
-        }
-        
-        .container {
-            max-width: 480px;
-            margin: 0 auto;
-            min-height: 100vh;
-            background-color: white;
-        }
-        
-        /* Header */
-        .header {
-            background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%);
-            color: white;
-            padding: 20px;
-            text-align: center;
-        }
-        
-        .header h1 {
-            font-size: 22px;
-            margin-bottom: 8px;
-        }
-        
-        .header-info {
-            font-size: 13px;
-            opacity: 0.9;
-        }
-        
-        /* Status Bar */
-        .status-bar {
-            background: linear-gradient(135deg, #059669 0%, #047857 100%);
-            color: white;
-            padding: 15px 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .status-left {
-            flex: 1;
-        }
-        
-        .status-right {
-            text-align: right;
-            font-size: 12px;
-        }
-        
-        /* Tabs */
-        .tabs {
-            display: flex;
-            background: white;
-            border-bottom: 2px solid #e5e7eb;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-        
-        .tab {
-            flex: 1;
-            padding: 16px 8px;
-            font-size: 13px;
-            font-weight: 600;
-            border: none;
-            background: white;
-            color: #6b7280;
-            cursor: pointer;
-            border-bottom: 3px solid transparent;
-            transition: all 0.2s;
-            text-align: center;
-        }
-        
-        .tab.active {
-            color: #1e40af;
-            border-bottom-color: #1e40af;
-            background: #eff6ff;
-        }
-        
-        /* Content */
-        .content {
-            padding: 20px;
-            padding-bottom: 40px;
-        }
-        
-        .tab-content {
-            display: none;
-        }
-        
-        .tab-content.active {
-            display: block;
-        }
-        
-        /* Collapsible Sections */
-        .section {
-            background: white;
-            border-radius: 12px;
-            margin-bottom: 16px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-            border: 1px solid #e5e7eb;
-            overflow: hidden;
-        }
-        
-        .section-header {
-            padding: 16px 20px;
-            background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
-            color: white;
-            cursor: pointer;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-weight: 600;
-        }
-        
-        .section-content {
-            padding: 20px;
-            display: none;
-        }
-        
-        .section-content.active {
-            display: block;
-        }
-        
-        .section-toggle {
-            font-size: 16px;
-            transition: transform 0.2s;
-        }
-        
-        .section-toggle.rotated {
-            transform: rotate(180deg);
-        }
-        
-        /* Cards */
-        .card {
-            background: white;
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-            border: 1px solid #e5e7eb;
-        }
-        
-        .card h3 {
-            color: #1e40af;
-            font-weight: 700;
-            margin-bottom: 16px;
-            font-size: 18px;
-        }
-        
-        /* Form Elements */
-        .form-group {
-            margin-bottom: 16px;
-        }
-        
-        .form-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-        }
-        
-        .form-row-3 {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 12px;
-        }
-        
-        .form-label {
-            display: block;
-            font-weight: 600;
-            color: #374151;
-            margin-bottom: 8px;
-            font-size: 14px;
-        }
-        
-        .form-input, .form-select, .form-textarea {
-            width: 100%;
-            padding: 14px;
-            border: 2px solid #e5e7eb;
-            border-radius: 8px;
-            font-size: 16px;
-            background: white;
-            transition: border-color 0.2s;
-        }
-        
-        .form-input:focus, .form-select:focus, .form-textarea:focus {
-            outline: none;
-            border-color: #1e40af;
-            box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.1);
-        }
-        
-        .form-select {
-            -webkit-appearance: none;
-            appearance: none;
-            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
-            background-position: right 12px center;
-            background-repeat: no-repeat;
-            background-size: 16px;
-            padding-right: 48px;
-        }
-        
-        /* Buttons */
-        .btn {
-            width: 100%;
-            padding: 16px;
-            border-radius: 8px;
-            border: none;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-        }
-        
-        .btn:active {
-            transform: scale(0.98);
-        }
-        
-        .btn-primary {
-            background: #1e40af;
-            color: white;
-        }
-        
-        .btn-success {
-            background: #059669;
-            color: white;
-        }
-        
-        .btn-warning {
-            background: #d97706;
-            color: white;
-        }
-        
-        .btn:disabled {
-            background: #d1d5db;
-            color: #9ca3af;
-            cursor: not-allowed;
-            transform: none;
-        }
-        
-        /* Activity Entry */
-        .activity-entry {
-            background: #f8fafc;
-            border: 2px solid #e2e8f0;
-            border-radius: 12px;
-            padding: 16px;
-            margin-bottom: 16px;
-            position: relative;
-        }
-        
-        .activity-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 12px;
-        }
-        
-        .activity-time {
-            background: #1e40af;
-            color: white;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-        
-        .activity-delete {
-            background: #dc2626;
-            color: white;
-            border: none;
-            padding: 6px 10px;
-            border-radius: 4px;
-            font-size: 12px;
-            cursor: pointer;
-        }
-        
-        .activity-details {
-            font-size: 14px;
-            line-height: 1.5;
-        }
-        
-        .activity-photos {
-            display: flex;
-            gap: 8px;
-            margin-top: 12px;
-            overflow-x: auto;
-        }
-        
-        .activity-photo {
-            width: 60px;
-            height: 60px;
-            object-fit: cover;
-            border-radius: 6px;
-            flex-shrink: 0;
-        }
-        
-        /* Summary Stats */
-        .summary-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 16px;
-            margin-bottom: 20px;
-        }
-        
-        .summary-item {
-            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-            padding: 16px;
-            border-radius: 8px;
-            text-align: center;
-            border: 1px solid #93c5fd;
-        }
-        
-        .summary-number {
-            font-size: 24px;
-            font-weight: 700;
-            color: #1e40af;
-            margin-bottom: 4px;
-        }
-        
-        .summary-label {
-            font-size: 12px;
-            color: #1e40af;
-            font-weight: 600;
-        }
-        
-        /* Photo Section */
-        .photo-section {
-            border: 2px dashed #d1d5db;
-            border-radius: 8px;
-            padding: 16px;
-            margin-bottom: 16px;
-            text-align: center;
-            background: #fafafa;
-        }
-        
-        .photo-preview {
-            width: 100%;
-            max-height: 150px;
-            object-fit: cover;
-            border-radius: 8px;
-            margin-bottom: 8px;
-        }
-        
-        .photo-name {
-            font-size: 12px;
-            color: #6b7280;
-            margin-bottom: 8px;
-            font-weight: 500;
-        }
-        
-        /* Utilities */
-        .hidden {
-            display: none !important;
-        }
-        
-        .text-center {
-            text-align: center;
-        }
-        
-        .success-message {
-            background: #dcfce7;
-            border: 1px solid #16a34a;
-            color: #15803d;
-            padding: 12px;
-            border-radius: 8px;
-            margin: 16px 0;
-            text-align: center;
-            font-weight: 500;
-        }
-        
-        .error-message {
-            background: #fef2f2;
-            border: 1px solid #ef4444;
-            color: #dc2626;
-            padding: 12px;
-            border-radius: 8px;
-            margin: 16px 0;
-            text-align: center;
-            font-weight: 500;
-        }
+    setActivityData(prev => ({
+      ...prev,
+      startTime: timeString
+    }));
+    
+    // Update time every second
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
-        .info-message {
-            background: #eff6ff;
-            border: 1px solid #3b82f6;
-            color: #1e40af;
-            padding: 12px;
-            border-radius: 8px;
-            margin: 16px 0;
-            text-align: center;
-            font-weight: 500;
+  // Helper functions
+  const showMessage = (text, type) => {
+    setMessage({ text, type });
+    setTimeout(() => setMessage({ text: '', type: '' }), 4000);
+  };
+
+  const toggleSection = (section) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
+  };
+
+  const handleOverviewChange = (field, value) => {
+    setOverviewData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleActivityChange = (field, value) => {
+    setActivityData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSafetyChange = (field, value) => {
+    setSafetyData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handlePhotoUpload = (photoNum, event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      showMessage('❌ Photo too large. Max 5MB allowed.', 'error');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setPhotos(prev => ({
+        ...prev,
+        [photoNum]: {
+          data: e.target.result,
+          name: file.name
         }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <!-- Header -->
-        <div class="header">
-            <h1>🏗️ Daily Site Report System</h1>
-            <div class="header-info">
-                <span id="current-date">Loading...</span> • <span id="current-time">Loading...</span>
-            </div>
+      }));
+      showMessage(`✅ Photo ${photoNum} uploaded!`, 'success');
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removePhoto = (photoNum) => {
+    setPhotos(prev => ({ ...prev, [photoNum]: null }));
+    showMessage(`✅ Photo ${photoNum} removed.`, 'success');
+  };
+
+  const addActivity = () => {
+    const { startTime, location, contractor, workCategory } = activityData;
+    
+    if (!startTime || !location || !contractor || !workCategory) {
+      showMessage('❌ Please fill in Start Time, Location, Contractor, and Work Category', 'error');
+      return;
+    }
+
+    const activity = {
+      id: Date.now(),
+      timestamp: new Date().toLocaleString(),
+      ...activityData,
+      photos: JSON.parse(JSON.stringify(photos))
+    };
+
+    setDailyActivities(prev => [...prev, activity]);
+    
+    // Clear form but keep overview data
+    setActivityData({
+      startTime: getCurrentRoundedTime(),
+      endTime: '',
+      location: '',
+      specificArea: '',
+      locationDetails: '',
+      contractor: '',
+      workCategory: '',
+      workType: '',
+      workDescription: '',
+      workStatus: '',
+      qualityStatus: '',
+      workerCount: '',
+      supervisorCount: '',
+      specialistCount: '',
+      equipmentUsed: '',
+      equipmentCount: '',
+      equipmentDetails: '',
+      materialType: '',
+      materialDetails: '',
+      activitySafetyRemarks: '',
+      activityGeneralRemarks: ''
+    });
+    
+    setPhotos({ 1: null, 2: null });
+    showMessage('✅ Activity added successfully!', 'success');
+  };
+
+  const getCurrentRoundedTime = () => {
+    const now = new Date();
+    const minutes = now.getMinutes();
+    const roundedMinutes = minutes < 30 ? '00' : '30';
+    return `${now.getHours().toString().padStart(2, '0')}:${roundedMinutes}`;
+  };
+
+  const deleteActivity = (index) => {
+    if (window.confirm('❌ Delete this activity?')) {
+      setDailyActivities(prev => prev.filter((_, i) => i !== index));
+      showMessage('✅ Activity deleted.', 'success');
+    }
+  };
+
+  const generateCSV = () => {
+    const headers = [
+      'Date', 'Project', 'Reported By', 'Weather', 'Site Conditions',
+      'Start Time', 'End Time', 'Location', 'Area', 'Location Details',
+      'Contractor', 'Work Category', 'Work Type', 'Description', 'Status', 'Quality',
+      'Workers', 'Supervisors', 'Specialists', 'Equipment', 'Equipment Count', 'Equipment Details',
+      'Material Type', 'Material Details', 'Safety Remarks', 'General Remarks',
+      'Photo 1', 'Photo 2', 'Timestamp'
+    ];
+    
+    const finalProject = overviewData.projectName === 'Others' ? 
+      overviewData.customProjectName : overviewData.projectName;
+    
+    const csvRows = dailyActivities.map(activity => [
+      new Date().toLocaleDateString(),
+      `"${finalProject || ''}"`,
+      `"${overviewData.reportedBy || ''}"`,
+      `"${overviewData.weatherCondition || ''}"`,
+      `"${overviewData.siteConditions || ''}"`,
+      activity.startTime || '',
+      activity.endTime || '',
+      `"${activity.location || ''}"`,
+      `"${activity.specificArea || ''}"`,
+      `"${activity.locationDetails || ''}"`,
+      `"${activity.contractor || ''}"`,
+      `"${activity.workCategory || ''}"`,
+      `"${activity.workType || ''}"`,
+      `"${(activity.workDescription || '').replace(/"/g, '""')}"`,
+      `"${activity.workStatus || ''}"`,
+      `"${activity.qualityStatus || ''}"`,
+      activity.workerCount || '',
+      activity.supervisorCount || '',
+      activity.specialistCount || '',
+      `"${activity.equipmentUsed || ''}"`,
+      activity.equipmentCount || '',
+      `"${(activity.equipmentDetails || '').replace(/"/g, '""')}"`,
+      `"${activity.materialType || ''}"`,
+      `"${(activity.materialDetails || '').replace(/"/g, '""')}"`,
+      `"${(activity.activitySafetyRemarks || '').replace(/"/g, '""')}"`,
+      `"${(activity.activityGeneralRemarks || '').replace(/"/g, '""')}"`,
+      `"${(activity.photos && activity.photos[1] ? activity.photos[1].name : '')}"`,
+      `"${(activity.photos && activity.photos[2] ? activity.photos[2].name : '')}"`,
+      `"${activity.timestamp || ''}"`
+    ].join(','));
+    
+    return [headers.join(','), ...csvRows].join('\n');
+  };
+
+  const downloadCSV = () => {
+    if (dailyActivities.length === 0) {
+      showMessage('❌ No activities to export.', 'error');
+      return;
+    }
+    
+    try {
+      const csvContent = generateCSV();
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      
+      const today = new Date().toISOString().split('T')[0];
+      const finalProject = overviewData.projectName === 'Others' ? 
+        overviewData.customProjectName : overviewData.projectName;
+      const projectName = (finalProject || 'Project').replace(/\s+/g, '_');
+      
+      const fileName = `Daily_Site_Report_${projectName}_${today}.csv`;
+      
+      link.setAttribute('href', url);
+      link.setAttribute('download', fileName);
+      link.style.visibility = 'hidden';
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      showMessage('✅ CSV downloaded! Share it via your phone.', 'success');
+    } catch (error) {
+      showMessage('❌ CSV export failed.', 'error');
+    }
+  };
+
+  // Calculate summary stats
+  const totalWorkers = dailyActivities.reduce((sum, activity) => {
+    return sum + (parseInt(activity.workerCount) || 0) + 
+           (parseInt(activity.supervisorCount) || 0) + 
+           (parseInt(activity.specialistCount) || 0);
+  }, 0);
+  
+  const activeContractors = [...new Set(dailyActivities.map(a => a.contractor).filter(c => c))].length;
+  
+  let totalHours = 0;
+  dailyActivities.forEach(activity => {
+    if (activity.startTime && activity.endTime) {
+      const start = new Date(`2000-01-01T${activity.startTime}`);
+      const end = new Date(`2000-01-01T${activity.endTime}`);
+      const hours = (end - start) / (1000 * 60 * 60);
+      if (hours > 0) totalHours += hours;
+    }
+  });
+
+  return (
+    <div className="max-w-md mx-auto min-h-screen bg-white">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-blue-800 to-blue-900 text-white p-5 text-center">
+        <h1 className="text-xl font-bold mb-2">🏗️ Daily Site Report System</h1>
+        <div className="text-sm opacity-90">
+          {currentTime.toLocaleDateString()} • {currentTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
         </div>
-        
-        <!-- Status Bar -->
-        <div class="status-bar">
-            <div class="status-left">
-                <div style="font-weight: 600;">📅 Today's Report</div>
-                <div style="font-size: 12px; opacity: 0.9;"><span id="activity-count">0</span> activities recorded</div>
-            </div>
-            <div class="status-right">
-                <div style="font-weight: 600;" id="report-status">🟡 In Progress</div>
-                <div>Auto-saved: <span id="last-saved">Not saved</span></div>
-            </div>
+      </div>
+      
+      {/* Status Bar */}
+      <div className="bg-gradient-to-r from-green-600 to-green-700 text-white p-4 flex justify-between items-center">
+        <div>
+          <div className="font-semibold">📅 Today's Report</div>
+          <div className="text-xs opacity-90">{dailyActivities.length} activities recorded</div>
         </div>
-
-        <!-- Tabs -->
-        <div class="tabs">
-            <button class="tab active" onclick="showTab('activity', this)">📝 Activity</button>
-            <button class="tab" onclick="showTab('safety', this)">🛡️ Safety</button>
-            <button class="tab" onclick="showTab('progress', this)">📈 Progress</button>
-            <button class="tab" onclick="showTab('report', this)">📊 Report</button>
+        <div className="text-right text-xs">
+          <div className="font-semibold">
+            {dailyActivities.length === 0 ? '🟡 In Progress' : 
+             dailyActivities.length < 3 ? '🟠 Partial' : '🟢 Ready'}
+          </div>
+          <div>Data saved in memory</div>
         </div>
+      </div>
 
-        <!-- Content -->
-        <div class="content">
-            <!-- Activity Tab -->
-            <div id="activity-content" class="tab-content active">
-                <!-- Site Overview Section -->
-                <div class="section">
-                    <div class="section-header" onclick="toggleSection('overview')">
-                        <span>🏗️ Site Overview</span>
-                        <span class="section-toggle" id="overview-toggle">▼</span>
+      {/* Tabs */}
+      <div className="flex bg-white border-b-2 border-gray-200 sticky top-0 z-10">
+        {[
+          { id: 'activity', icon: '📝', label: 'Activity' },
+          { id: 'safety', icon: '🛡️', label: 'Safety' },
+          { id: 'progress', icon: '📈', label: 'Progress + QA' },
+          { id: 'report', icon: '📊', label: 'Report' }
+        ].map(tab => (
+          <button
+            key={tab.id}
+            className={`flex-1 p-4 text-sm font-semibold transition-colors ${
+              activeTab === tab.id 
+                ? 'text-blue-800 bg-blue-50 border-b-3 border-blue-800' 
+                : 'text-gray-600 hover:text-blue-600'
+            }`}
+            onClick={() => setActiveTab(tab.id)}
+          >
+            {tab.icon} {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Content */}
+      <div className="p-5 pb-10">
+        {/* Activity Tab */}
+        {activeTab === 'activity' && (
+          <div>
+            {/* Site Overview Section */}
+            <div className="bg-white rounded-xl mb-4 shadow-lg border border-gray-200 overflow-hidden">
+              <div 
+                className="bg-gradient-to-r from-blue-800 to-blue-600 text-white p-4 cursor-pointer flex justify-between items-center"
+                onClick={() => toggleSection('overview')}
+              >
+                <span className="font-semibold">🏗️ Site Overview</span>
+                <span className={`transition-transform ${expandedSections.overview ? 'rotate-180' : ''}`}>▼</span>
+              </div>
+              {expandedSections.overview && (
+                <div className="p-5">
+                  <div className="mb-4">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Project</label>
+                    <select 
+                      value={overviewData.projectName}
+                      onChange={(e) => handleOverviewChange('projectName', e.target.value)}
+                      className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-600 focus:outline-none"
+                    >
+                      <option value="">Select Project</option>
+                      <option value="TPE11 Day 2">TPE11 Day 2</option>
+                      <option value="Owner works">Owner works</option>
+                      <option value="Tenant Works">Tenant Works</option>
+                      <option value="Others">Others</option>
+                    </select>
+                  </div>
+                  
+                  {overviewData.projectName === 'Others' && (
+                    <div className="mb-4">
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Custom Project Name</label>
+                      <input 
+                        type="text"
+                        value={overviewData.customProjectName}
+                        onChange={(e) => handleOverviewChange('customProjectName', e.target.value)}
+                        placeholder="Enter project name..."
+                        className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-600 focus:outline-none"
+                      />
                     </div>
-                    <div class="section-content active" id="overview-content">
-                        <div class="form-group">
-                            <label class="form-label">Project</label>
-                            <select id="project-name" class="form-select" onchange="handleProjectChange()">
-                                <option value="">Select Project</option>
-                                <option value="ABC Tower Construction">ABC Tower Construction</option>
-                                <option value="Office Complex Phase 2">Office Complex Phase 2</option>
-                                <option value="Shopping Mall Development">Shopping Mall Development</option>
-                                <option value="Residential Block A">Residential Block A</option>
-                                <option value="Industrial Warehouse">Industrial Warehouse</option>
-                                <option value="Custom Project">Custom Project</option>
-                            </select>
-                        </div>
-                        <div class="form-group hidden" id="custom-project-group">
-                            <label class="form-label">Custom Project Name</label>
-                            <input type="text" id="custom-project-name" placeholder="Enter project name..." class="form-input">
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label class="form-label">Site Supervisor</label>
-                                <select id="site-supervisor" class="form-select">
-                                    <option value="">Select Supervisor</option>
-                                    <option value="John Smith">John Smith</option>
-                                    <option value="Michael Chen">Michael Chen</option>
-                                    <option value="Sarah Johnson">Sarah Johnson</option>
-                                    <option value="David Lee">David Lee</option>
-                                    <option value="Maria Rodriguez">Maria Rodriguez</option>
-                                    <option value="Other">Other</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Work Shift</label>
-                                <select id="work-shift" class="form-select">
-                                    <option value="">Select Shift</option>
-                                    <option value="Day Shift (7AM-7PM)">Day Shift (7AM-7PM)</option>
-                                    <option value="Night Shift (7PM-7AM)">Night Shift (7PM-7AM)</option>
-                                    <option value="Morning (7AM-3PM)">Morning (7AM-3PM)</option>
-                                    <option value="Afternoon (3PM-11PM)">Afternoon (3PM-11PM)</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label class="form-label">Weather</label>
-                                <select id="weather-condition" class="form-select">
-                                    <option value="">Select Weather</option>
-                                    <option value="Sunny">☀️ Sunny</option>
-                                    <option value="Partly Cloudy">⛅ Partly Cloudy</option>
-                                    <option value="Cloudy">☁️ Cloudy</option>
-                                    <option value="Light Rain">🌦️ Light Rain</option>
-                                    <option value="Heavy Rain">🌧️ Heavy Rain</option>
-                                    <option value="Windy">💨 Windy</option>
-                                    <option value="Hot">🌡️ Hot</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Site Conditions</label>
-                                <select id="site-conditions" class="form-select">
-                                    <option value="">Select Conditions</option>
-                                    <option value="Dry and Safe">Dry and Safe</option>
-                                    <option value="Wet Surfaces">Wet Surfaces</option>
-                                    <option value="Muddy Areas">Muddy Areas</option>
-                                    <option value="Slippery Conditions">Slippery Conditions</option>
-                                    <option value="Poor Visibility">Poor Visibility</option>
-                                    <option value="Dusty Conditions">Dusty Conditions</option>
-                                </select>
-                            </div>
-                        </div>
+                  )}
+                  
+                  <div className="mb-4">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Reported By</label>
+                    <select 
+                      value={overviewData.reportedBy}
+                      onChange={(e) => handleOverviewChange('reportedBy', e.target.value)}
+                      className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-600 focus:outline-none"
+                    >
+                      <option value="">Select User</option>
+                      <option value="user 1">user 1</option>
+                      <option value="user 2">user 2</option>
+                      <option value="user 3">user 3</option>
+                    </select>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Weather</label>
+                      <select 
+                        value={overviewData.weatherCondition}
+                        onChange={(e) => handleOverviewChange('weatherCondition', e.target.value)}
+                        className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-600 focus:outline-none"
+                      >
+                        <option value="">Select Weather</option>
+                        <option value="Sunny">☀️ Sunny</option>
+                        <option value="Partly Cloudy">⛅ Partly Cloudy</option>
+                        <option value="Cloudy">☁️ Cloudy</option>
+                        <option value="Light Rain">🌦️ Light Rain</option>
+                      </select>
                     </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Site Conditions</label>
+                      <select 
+                        value={overviewData.siteConditions}
+                        onChange={(e) => handleOverviewChange('siteConditions', e.target.value)}
+                        className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-600 focus:outline-none"
+                      >
+                        <option value="">Select Conditions</option>
+                        <option value="Dry and Safe">Dry and Safe</option>
+                        <option value="Wet Surfaces">Wet Surfaces</option>
+                        <option value="Muddy Areas">Muddy Areas</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Activity Details Section */}
+            <div className="bg-white rounded-xl mb-4 shadow-lg border border-gray-200 overflow-hidden">
+              <div 
+                className="bg-gradient-to-r from-blue-800 to-blue-600 text-white p-4 cursor-pointer flex justify-between items-center"
+                onClick={() => toggleSection('activity-details')}
+              >
+                <span className="font-semibold">⏰ Activity Details</span>
+                <span className={`transition-transform ${expandedSections['activity-details'] ? 'rotate-180' : ''}`}>▼</span>
+              </div>
+              {expandedSections['activity-details'] && (
+                <div className="p-5">
+                  <div className="grid grid-cols-2 gap-3 mb-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Start Time</label>
+                      <select 
+                        value={activityData.startTime}
+                        onChange={(e) => handleActivityChange('startTime', e.target.value)}
+                        className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-600 focus:outline-none"
+                      >
+                        <option value="">Select Time</option>
+                        {timeOptions.map(time => (
+                          <option key={time} value={time}>{time}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">End Time</label>
+                      <select 
+                        value={activityData.endTime}
+                        onChange={(e) => handleActivityChange('endTime', e.target.value)}
+                        className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-600 focus:outline-none"
+                      >
+                        <option value="">Select Time</option>
+                        {timeOptions.map(time => (
+                          <option key={time} value={time}>{time}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-3 mb-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Building/Floor</label>
+                      <select 
+                        value={activityData.location}
+                        onChange={(e) => handleActivityChange('location', e.target.value)}
+                        className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-600 focus:outline-none"
+                      >
+                        <option value="">Select Location</option>
+                        <option value="Ground Floor">Ground Floor</option>
+                        <option value="1st Floor">1st Floor</option>
+                        <option value="2nd Floor">2nd Floor</option>
+                        <option value="3rd Floor">3rd Floor</option>
+                        <option value="Basement 1">Basement 1</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Specific Area</label>
+                      <select 
+                        value={activityData.specificArea}
+                        onChange={(e) => handleActivityChange('specificArea', e.target.value)}
+                        className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-600 focus:outline-none"
+                      >
+                        <option value="">Select Area</option>
+                        <option value="North Wing">North Wing</option>
+                        <option value="South Wing">South Wing</option>
+                        <option value="Central Core">Central Core</option>
+                        <option value="Lobby Area">Lobby Area</option>
+                      </select>
+                    </div>
+                  </div>
+                  
+                  <div className="mb-4">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Room/Unit Details</label>
+                    <input 
+                      type="text"
+                      value={activityData.locationDetails}
+                      onChange={(e) => handleActivityChange('locationDetails', e.target.value)}
+                      placeholder="e.g., Room 301, Unit A, Grid Line 5-8"
+                      className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-600 focus:outline-none"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Contractor</label>
+                    <select 
+                      value={activityData.contractor}
+                      onChange={(e) => handleActivityChange('contractor', e.target.value)}
+                      className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-600 focus:outline-none"
+                    >
+                      <option value="">Select Contractor</option>
+                      <option value="ABC Construction Ltd">ABC Construction Ltd</option>
+                      <option value="BuildPro Engineering">BuildPro Engineering</option>
+                      <option value="Elite Contractors">Elite Contractors</option>
+                      <option value="MegaBuild Corp">MegaBuild Corp</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Work Details Section */}
+            <div className="bg-white rounded-xl mb-4 shadow-lg border border-gray-200 overflow-hidden">
+              <div 
+                className="bg-gradient-to-r from-blue-800 to-blue-600 text-white p-4 cursor-pointer flex justify-between items-center"
+                onClick={() => toggleSection('work-details')}
+              >
+                <span className="font-semibold">🔧 Work Details</span>
+                <span className={`transition-transform ${expandedSections['work-details'] ? 'rotate-180' : ''}`}>▼</span>
+              </div>
+              {expandedSections['work-details'] && (
+                <div className="p-5">
+                  <div className="mb-4">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Work Category</label>
+                    <select 
+                      value={activityData.workCategory}
+                      onChange={(e) => {
+                        const newCategory = e.target.value;
+                        setActivityData(prev => ({
+                          ...prev,
+                          workCategory: newCategory,
+                          workType: '' // Reset work type when category changes
+                        }));
+                      }}
+                      className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-600 focus:outline-none"
+                    >
+                      <option value="">Select Category</option>
+                      <option value="Structural">Structural Work</option>
+                      <option value="Mechanical">Mechanical Work</option>
+                      <option value="Electrical">Electrical Work</option>
+                      <option value="Plumbing">Plumbing Work</option>
+                      <option value="HVAC">HVAC Work</option>
+                      <option value="Fire Safety">Fire Safety</option>
+                      <option value="Finishes">Finishes & Fixtures</option>
+                      <option value="Landscaping">Landscaping</option>
+                      <option value="Testing">Testing & Commissioning</option>
+                      <option value="Maintenance">Maintenance</option>
+                    </select>
+                  </div>
+                  
+                  <div className="mb-4">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Specific Work Type</label>
+                    <select 
+                      value={activityData.workType}
+                      onChange={(e) => handleActivityChange('workType', e.target.value)}
+                      className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-600 focus:outline-none"
+                      disabled={!activityData.workCategory}
+                    >
+                      <option value="">Select Work Type</option>
+                      {activityData.workCategory && workTypeMap[activityData.workCategory] && 
+                        workTypeMap[activityData.workCategory].map(type => (
+                          <option key={type} value={type}>{type}</option>
+                        ))
+                      }
+                    </select>
+                  </div>
+                  
+                  <div className="mb-4">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Work Description</label>
+                    <textarea 
+                      value={activityData.workDescription}
+                      onChange={(e) => handleActivityChange('workDescription', e.target.value)}
+                      placeholder="Detailed description of work performed..."
+                      rows={3}
+                      className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-600 focus:outline-none resize-none"
+                    />
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Work Status</label>
+                      <select 
+                        value={activityData.workStatus}
+                        onChange={(e) => handleActivityChange('workStatus', e.target.value)}
+                        className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-600 focus:outline-none"
+                      >
+                        <option value="">Select Status</option>
+                        <option value="Started">Started</option>
+                        <option value="In Progress">In Progress</option>
+                        <option value="50% Complete">50% Complete</option>
+                        <option value="75% Complete">75% Complete</option>
+                        <option value="Completed">Completed</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Quality Status</label>
+                      <select 
+                        value={activityData.qualityStatus}
+                        onChange={(e) => handleActivityChange('qualityStatus', e.target.value)}
+                        className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-600 focus:outline-none"
+                      >
+                        <option value="">Select Quality</option>
+                        <option value="Excellent">Excellent</option>
+                        <option value="Good">Good</option>
+                        <option value="Satisfactory">Satisfactory</option>
+                        <option value="Needs Improvement">Needs Improvement</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Manpower Section */}
+            <div className="bg-white rounded-xl mb-4 shadow-lg border border-gray-200 overflow-hidden">
+              <div 
+                className="bg-gradient-to-r from-blue-800 to-blue-600 text-white p-4 cursor-pointer flex justify-between items-center"
+                onClick={() => toggleSection('manpower')}
+              >
+                <span className="font-semibold">👥 Manpower & Equipment</span>
+                <span className={`transition-transform ${expandedSections.manpower ? 'rotate-180' : ''}`}>▼</span>
+              </div>
+              {expandedSections.manpower && (
+                <div className="p-5">
+                  <div className="grid grid-cols-3 gap-3 mb-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Workers</label>
+                      <select 
+                        value={activityData.workerCount}
+                        onChange={(e) => handleActivityChange('workerCount', e.target.value)}
+                        className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-600 focus:outline-none"
+                      >
+                        <option value="">Count</option>
+                        {[1,2,3,4,5,6,7,8,9,10,15,20].map(n => (
+                          <option key={n} value={n.toString()}>{n}{n === 20 ? '+' : ''}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Supervisors</label>
+                      <select 
+                        value={activityData.supervisorCount}
+                        onChange={(e) => handleActivityChange('supervisorCount', e.target.value)}
+                        className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-600 focus:outline-none"
+                      >
+                        <option value="">Count</option>
+                        {[1,2,3,4].map(n => (
+                          <option key={n} value={n.toString()}>{n}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Specialists</label>
+                      <select 
+                        value={activityData.specialistCount}
+                        onChange={(e) => handleActivityChange('specialistCount', e.target.value)}
+                        className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-600 focus:outline-none"
+                      >
+                        <option value="">Count</option>
+                        {[1,2,3,4].map(n => (
+                          <option key={n} value={n.toString()}>{n}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-3 mb-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Equipment Used</label>
+                      <select 
+                        value={activityData.equipmentUsed}
+                        onChange={(e) => handleActivityChange('equipmentUsed', e.target.value)}
+                        className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-600 focus:outline-none"
+                      >
+                        <option value="">Select Equipment</option>
+                        <option value="Tower Crane">Tower Crane</option>
+                        <option value="Mobile Crane">Mobile Crane</option>
+                        <option value="Excavator">Excavator</option>
+                        <option value="Concrete Mixer">Concrete Mixer</option>
+                        <option value="Scaffold System">Scaffold System</option>
+                        <option value="Hand Tools Only">Hand Tools Only</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Equipment Count</label>
+                      <select 
+                        value={activityData.equipmentCount}
+                        onChange={(e) => handleActivityChange('equipmentCount', e.target.value)}
+                        className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-600 focus:outline-none"
+                      >
+                        <option value="">Count</option>
+                        {[1,2,3,4,5].map(n => (
+                          <option key={n} value={n.toString()}>{n}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Equipment Details</label>
+                    <textarea 
+                      value={activityData.equipmentDetails}
+                      onChange={(e) => handleActivityChange('equipmentDetails', e.target.value)}
+                      placeholder="Equipment quantities and specifications..."
+                      rows={2}
+                      className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-600 focus:outline-none resize-none"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Materials Section */}
+            <div className="bg-white rounded-xl mb-4 shadow-lg border border-gray-200 overflow-hidden">
+              <div 
+                className="bg-gradient-to-r from-blue-800 to-blue-600 text-white p-4 cursor-pointer flex justify-between items-center"
+                onClick={() => toggleSection('materials')}
+              >
+                <span className="font-semibold">📦 Materials Used</span>
+                <span className={`transition-transform ${expandedSections.materials ? 'rotate-180' : ''}`}>▼</span>
+              </div>
+              {expandedSections.materials && (
+                <div className="p-5">
+                  <div className="mb-4">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Material Type</label>
+                    <select 
+                      value={activityData.materialType}
+                      onChange={(e) => handleActivityChange('materialType', e.target.value)}
+                      className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-600 focus:outline-none"
+                    >
+                      <option value="">Select Material Type</option>
+                      <option value="Concrete">Concrete</option>
+                      <option value="Steel/Rebar">Steel/Rebar</option>
+                      <option value="Bricks/Blocks">Bricks/Blocks</option>
+                      <option value="Electrical Materials">Electrical Materials</option>
+                      <option value="Plumbing Materials">Plumbing Materials</option>
+                      <option value="No Materials Used">No Materials Used</option>
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Material Details & Quantities</label>
+                    <textarea 
+                      value={activityData.materialDetails}
+                      onChange={(e) => handleActivityChange('materialDetails', e.target.value)}
+                      placeholder="Material types, quantities, quality notes..."
+                      rows={2}
+                      className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-600 focus:outline-none resize-none"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Photos Section */}
+            <div className="bg-white rounded-xl mb-4 shadow-lg border border-gray-200 overflow-hidden">
+              <div 
+                className="bg-gradient-to-r from-blue-800 to-blue-600 text-white p-4 cursor-pointer flex justify-between items-center"
+                onClick={() => toggleSection('photos')}
+              >
+                <span className="font-semibold">📸 Photos</span>
+                <span className={`transition-transform ${expandedSections.photos ? 'rotate-180' : ''}`}>▼</span>
+              </div>
+              {expandedSections.photos && (
+                <div className="p-5">
+                  <div className="grid grid-cols-2 gap-4">
+                    {[1, 2].map(photoNum => (
+                      <div key={photoNum} className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center bg-gray-50">
+                        <label className="block text-sm font-semibold text-gray-700 mb-3">
+                          {photoNum === 1 ? 'Before Photo' : 'After Photo'}
+                        </label>
+                        
+                        {photos[photoNum] ? (
+                          <div>
+                            <img 
+                              src={photos[photoNum].data} 
+                              alt={`Photo ${photoNum}`}
+                              className="w-full h-32 object-cover rounded-lg mb-2"
+                            />
+                            <div className="text-xs text-gray-600 mb-2">{photos[photoNum].name}</div>
+                            <button 
+                              onClick={() => removePhoto(photoNum)}
+                              className="bg-red-600 text-white px-3 py-1 rounded text-xs font-medium"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        ) : (
+                          <div>
+                            <div className="grid grid-cols-2 gap-2 mb-2">
+                              <label className="bg-blue-600 text-white p-2 rounded cursor-pointer text-xs font-medium">
+                                📷 Camera
+                                <input 
+                                  type="file" 
+                                  accept="image/*" 
+                                  capture="environment"
+                                  className="hidden"
+                                  onChange={(e) => handlePhotoUpload(photoNum, e)}
+                                />
+                              </label>
+                              <label className="bg-gray-600 text-white p-2 rounded cursor-pointer text-xs font-medium">
+                                📁 Gallery
+                                <input 
+                                  type="file" 
+                                  accept="image/*"
+                                  className="hidden"
+                                  onChange={(e) => handlePhotoUpload(photoNum, e)}
+                                />
+                              </label>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Remarks Section */}
+            <div className="bg-white rounded-xl mb-4 shadow-lg border border-gray-200 overflow-hidden">
+              <div 
+                className="bg-gradient-to-r from-blue-800 to-blue-600 text-white p-4 cursor-pointer flex justify-between items-center"
+                onClick={() => toggleSection('remarks')}
+              >
+                <span className="font-semibold">💬 Remarks</span>
+                <span className={`transition-transform ${expandedSections.remarks ? 'rotate-180' : ''}`}>▼</span>
+              </div>
+              {expandedSections.remarks && (
+                <div className="p-5">
+                  <div className="mb-4">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Safety Notes</label>
+                    <textarea 
+                      value={activityData.activitySafetyRemarks}
+                      onChange={(e) => handleActivityChange('activitySafetyRemarks', e.target.value)}
+                      placeholder="Safety observations for this activity..."
+                      rows={2}
+                      className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-600 focus:outline-none resize-none"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">General Remarks</label>
+                    <textarea 
+                      value={activityData.activityGeneralRemarks}
+                      onChange={(e) => handleActivityChange('activityGeneralRemarks', e.target.value)}
+                      placeholder="Other notes and observations..."
+                      rows={2}
+                      className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-600 focus:outline-none resize-none"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Add Activity Button */}
+            <button 
+              onClick={addActivity}
+              className="w-full bg-green-600 text-white p-4 rounded-lg font-semibold text-lg mb-4 hover:bg-green-700 transition-colors"
+            >
+              ➕ Add Activity to Report
+            </button>
+            
+            {/* Message Display */}
+            {message.text && (
+              <div className={`p-3 rounded-lg text-center font-medium ${
+                message.type === 'success' 
+                  ? 'bg-green-100 border border-green-400 text-green-700' 
+                  : 'bg-red-100 border border-red-400 text-red-700'
+              }`}>
+                {message.text}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Safety Tab */}
+        {activeTab === 'safety' && (
+          <div className="space-y-4">
+            <div className="bg-white rounded-xl p-5 shadow-lg border border-gray-200">
+              <h3 className="text-lg font-bold text-blue-800 mb-4">🛡️ Daily Safety Status</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Overall Safety Status</label>
+                  <select 
+                    value={safetyData.safetyStatus}
+                    onChange={(e) => handleSafetyChange('safetyStatus', e.target.value)}
+                    className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-600 focus:outline-none"
+                  >
+                    <option value="">Select Status</option>
+                    <option value="Excellent">🟢 Excellent - No Issues</option>
+                    <option value="Good">🟡 Good - Minor Issues</option>
+                    <option value="Fair">🟠 Fair - Some Concerns</option>
+                    <option value="Poor">🔴 Poor - Major Issues</option>
+                  </select>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Safety Officer Present</label>
+                    <select 
+                      value={safetyData.safetyOfficer}
+                      onChange={(e) => handleSafetyChange('safetyOfficer', e.target.value)}
+                      className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-600 focus:outline-none"
+                    >
+                      <option value="">Select</option>
+                      <option value="Full Day">Yes - Full Day</option>
+                      <option value="Partial Day">Yes - Partial Day</option>
+                      <option value="Not Present">No - Not Present</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">PPE Compliance</label>
+                    <select 
+                      value={safetyData.ppeCompliance}
+                      onChange={(e) => handleSafetyChange('ppeCompliance', e.target.value)}
+                      className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-600 focus:outline-none"
+                    >
+                      <option value="">Select Compliance</option>
+                      <option value="100%">100% Compliant</option>
+                      <option value="95%">95% Compliant</option>
+                      <option value="90%">90% Compliant</option>
+                      <option value="Below 90%">Below 90%</option>
+                    </select>
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Safety Observations</label>
+                  <textarea 
+                    value={safetyData.safetyObservations}
+                    onChange={(e) => handleSafetyChange('safetyObservations', e.target.value)}
+                    placeholder="Safety incidents, observations, actions taken..."
+                    rows={3}
+                    className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-600 focus:outline-none resize-none"
+                  />
                 </div>
 
-                <!-- Activity Details Section -->
-                <div class="section">
-                    <div class="section-header" onclick="toggleSection('activity-details')">
-                        <span>⏰ Activity Details</span>
-                        <span class="section-toggle rotated" id="activity-details-toggle">▼</span>
-                    </div>
-                    <div class="section-content active" id="activity-details-content">
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label class="form-label">Start Time</label>
-                                <input type="time" id="activity-start-time" class="form-input">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">End Time</label>
-                                <input type="time" id="activity-end-time" class="form-input">
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label class="form-label">Building/Floor</label>
-                                <select id="location" class="form-select">
-                                    <option value="">Select Location</option>
-                                    <option value="Ground Floor">Ground Floor</option>
-                                    <option value="1st Floor">1st Floor</option>
-                                    <option value="2nd Floor">2nd Floor</option>
-                                    <option value="3rd Floor">3rd Floor</option>
-                                    <option value="4th Floor">4th Floor</option>
-                                    <option value="5th Floor">5th Floor</option>
-                                    <option value="Basement 1">Basement 1</option>
-                                    <option value="Basement 2">Basement 2</option>
-                                    <option value="Rooftop">Rooftop</option>
-                                    <option value="External Area">External Area</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Specific Area</label>
-                                <select id="specific-area" class="form-select">
-                                    <option value="">Select Area</option>
-                                    <option value="North Wing">North Wing</option>
-                                    <option value="South Wing">South Wing</option>
-                                    <option value="East Wing">East Wing</option>
-                                    <option value="West Wing">West Wing</option>
-                                    <option value="Central Core">Central Core</option>
-                                    <option value="Lobby Area">Lobby Area</option>
-                                    <option value="Service Area">Service Area</option>
-                                    <option value="Stairwell">Stairwell</option>
-                                    <option value="Elevator Shaft">Elevator Shaft</option>
-                                    <option value="Mechanical Room">Mechanical Room</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Room/Unit Details</label>
-                            <input type="text" id="location-details" placeholder="e.g., Room 301, Unit A, Grid Line 5-8" class="form-input">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Contractor</label>
-                            <select id="contractor" class="form-select">
-                                <option value="">Select Contractor</option>
-                                <option value="ABC Construction Ltd">ABC Construction Ltd</option>
-                                <option value="BuildPro Engineering">BuildPro Engineering</option>
-                                <option value="Elite Contractors">Elite Contractors</option>
-                                <option value="MegaBuild Corp">MegaBuild Corp</option>
-                                <option value="Premier Construction">Premier Construction</option>
-                                <option value="Skyline Builders">Skyline Builders</option>
-                                <option value="TechBuild Solutions">TechBuild Solutions</option>
-                                <option value="Urban Development Co">Urban Development Co</option>
-                            </select>
-                        </div>
-                    </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Near-Missed Issues</label>
+                  <textarea 
+                    value={safetyData.nearMissedIssues}
+                    onChange={(e) => handleSafetyChange('nearMissedIssues', e.target.value)}
+                    placeholder="Near-miss incidents and potential hazards identified..."
+                    rows={3}
+                    className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-600 focus:outline-none resize-none"
+                  />
                 </div>
 
-                <!-- Work Details Section -->
-                <div class="section">
-                    <div class="section-header" onclick="toggleSection('work-details')">
-                        <span>🔧 Work Details</span>
-                        <span class="section-toggle rotated" id="work-details-toggle">▼</span>
-                    </div>
-                    <div class="section-content active" id="work-details-content">
-                        <div class="form-group">
-                            <label class="form-label">Work Category</label>
-                            <select id="work-category" class="form-select" onchange="updateWorkTypes()">
-                                <option value="">Select Category</option>
-                                <option value="Structural">Structural Work</option>
-                                <option value="Mechanical">Mechanical Work</option>
-                                <option value="Electrical">Electrical Work</option>
-                                <option value="Plumbing">Plumbing Work</option>
-                                <option value="HVAC">HVAC Work</option>
-                                <option value="Fire Safety">Fire Safety</option>
-                                <option value="Finishes">Finishes & Fixtures</option>
-                                <option value="Landscaping">Landscaping</option>
-                                <option value="Testing">Testing & Commissioning</option>
-                                <option value="Maintenance">Maintenance</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Specific Work Type</label>
-                            <select id="work-type" class="form-select">
-                                <option value="">Select Work Type</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Work Description</label>
-                            <textarea id="work-description" placeholder="Detailed description of work performed..." rows="3" class="form-textarea"></textarea>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label class="form-label">Work Status</label>
-                                <select id="work-status" class="form-select">
-                                    <option value="">Select Status</option>
-                                    <option value="Started">Started</option>
-                                    <option value="In Progress">In Progress</option>
-                                    <option value="50% Complete">50% Complete</option>
-                                    <option value="75% Complete">75% Complete</option>
-                                    <option value="Completed">Completed</option>
-                                    <option value="On Hold">On Hold</option>
-                                    <option value="Delayed">Delayed</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Quality Status</label>
-                                <select id="quality-status" class="form-select">
-                                    <option value="">Select Quality</option>
-                                    <option value="Excellent">Excellent</option>
-                                    <option value="Good">Good</option>
-                                    <option value="Satisfactory">Satisfactory</option>
-                                    <option value="Needs Improvement">Needs Improvement</option>
-                                    <option value="Failed Inspection">Failed Inspection</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Link to Relevant Activity</label>
+                  <select 
+                    value={safetyData.linkedActivity}
+                    onChange={(e) => handleSafetyChange('linkedActivity', e.target.value)}
+                    className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-600 focus:outline-none"
+                  >
+                    <option value="">Select Activity</option>
+                    {dailyActivities.map((activity, index) => (
+                      <option key={activity.id} value={activity.id}>
+                        Activity #{index + 1} - {activity.startTime} - {activity.workCategory}
+                      </option>
+                    ))}
+                  </select>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
 
-                <!-- Manpower & Equipment Section -->
-                <div class="section">
-                    <div class="section-header" onclick="toggleSection('manpower')">
-                        <span>👥 Manpower & Equipment</span>
-                        <span class="section-toggle" id="manpower-toggle">▼</span>
-                    </div>
-                    <div class="section-content" id="manpower-content">
-                        <div class="form-row-3">
-                            <div class="form-group">
-                                <label class="form-label">Workers</label>
-                                <select id="worker-count" class="form-select">
-                                    <option value="">Count</option>
-                                    <option value="1">1</option>
-                                    <option value="2">2</option>
-                                    <option value="3">3</option>
-                                    <option value="4">4</option>
-                                    <option value="5">5</option>
-                                    <option value="6">6</option>
-                                    <option value="7">7</option>
-                                    <option value="8">8</option>
-                                    <option value="9">9</option>
-                                    <option value="10">10</option>
-                                    <option value="15">15</option>
-                                    <option value="20">20+</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Supervisors</label>
-                                <select id="supervisor-count" class="form-select">
-                                    <option value="">Count</option>
-                                    <option value="1">1</option>
-                                    <option value="2">2</option>
-                                    <option value="3">3</option>
-                                    <option value="4">4</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Specialists</label>
-                                <select id="specialist-count" class="form-select">
-                                    <option value="">Count</option>
-                                    <option value="1">1</option>
-                                    <option value="2">2</option>
-                                    <option value="3">3</option>
-                                    <option value="4">4</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Equipment Used</label>
-                            <select id="equipment-used" class="form-select">
-                                <option value="">Select Equipment</option>
-                                <option value="Tower Crane">Tower Crane</option>
-                                <option value="Mobile Crane">Mobile Crane</option>
-                                <option value="Excavator">Excavator</option>
-                                <option value="Concrete Mixer">Concrete Mixer</option>
-                                <option value="Scaffold System">Scaffold System</option>
-                                <option value="Working Platform">Working Platform</option>
-                                <option value="Welding Equipment">Welding Equipment</option>
-                                <option value="Hand Tools Only">Hand Tools Only</option>
-                                <option value="Multiple Equipment">Multiple Equipment</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Equipment Details</label>
-                            <textarea id="equipment-details" placeholder="Equipment quantities and specifications..." rows="2" class="form-textarea"></textarea>
-                        </div>
-                    </div>
+        {/* Progress + QA Tab */}
+        {activeTab === 'progress' && (
+          <div className="space-y-4">
+            <div className="bg-white rounded-xl p-5 shadow-lg border border-gray-200">
+              <h3 className="text-lg font-bold text-blue-800 mb-4">📈 Daily Progress</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Progress Rating</label>
+                  <select className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-600 focus:outline-none">
+                    <option value="">Rate Today's Progress</option>
+                    <option value="Excellent">🟢 Excellent - Ahead of Schedule</option>
+                    <option value="Good">🟡 Good - On Schedule</option>
+                    <option value="Fair">🟠 Fair - Minor Delays</option>
+                    <option value="Poor">🔴 Poor - Behind Schedule</option>
+                  </select>
                 </div>
-
-                <!-- Materials Section -->
-                <div class="section">
-                    <div class="section-header" onclick="toggleSection('materials')">
-                        <span>📦 Materials Used</span>
-                        <span class="section-toggle" id="materials-toggle">▼</span>
-                    </div>
-                    <div class="section-content" id="materials-content">
-                        <div class="form-group">
-                            <label class="form-label">Material Type</label>
-                            <select id="material-type" class="form-select">
-                                <option value="">Select Material Type</option>
-                                <option value="Concrete">Concrete</option>
-                                <option value="Steel/Rebar">Steel/Rebar</option>
-                                <option value="Bricks/Blocks">Bricks/Blocks</option>
-                                <option value="Electrical Materials">Electrical Materials</option>
-                                <option value="Plumbing Materials">Plumbing Materials</option>
-                                <option value="HVAC Components">HVAC Components</option>
-                                <option value="Windows/Doors">Windows/Doors</option>
-                                <option value="Paint/Coatings">Paint/Coatings</option>
-                                <option value="Multiple Materials">Multiple Materials</option>
-                                <option value="No Materials Used">No Materials Used</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Material Details & Quantities</label>
-                            <textarea id="material-details" placeholder="Material types, quantities, quality notes..." rows="2" class="form-textarea"></textarea>
-                        </div>
-                    </div>
+                
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Key Achievements</label>
+                  <textarea 
+                    placeholder="Major achievements and milestones..."
+                    rows={3}
+                    className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-600 focus:outline-none resize-none"
+                  />
                 </div>
+                
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Issues & Challenges</label>
+                  <textarea 
+                    placeholder="Problems encountered and solutions..."
+                    rows={3}
+                    className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-600 focus:outline-none resize-none"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Tomorrow's Plan</label>
+                  <textarea 
+                    placeholder="Planned activities for tomorrow..."
+                    rows={2}
+                    className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-600 focus:outline-none resize-none"
+                  />
+                </div>
+              </div>
+            </div>
 
-                <!-- Photos Section -->
-                <div class="section">
-                    <div class="section-header" onclick="toggleSection('photos')">
-                        <span>📸 Photos</span>
-                        <span class="section-toggle" id="photos-toggle">▼</span>
-                    </div>
-                    <div class="section-content" id="photos-content">
-                        <div class="form-row">
-                            <div class="photo-section">
-                                <label class="form-label">Before Photo</label>
-                                <div id="photo1-preview" class="hidden">
-                                    <img
+            <div className="bg-white rounded-xl p-5 shadow-lg border border-gray-200">
+              <h3 className="text-lg font-bold text-blue-800 mb-4">🔍 Quality Control</h3>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Overall Quality</label>
+                    <select className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-600 focus:outline-none">
+                      <option value="">Select Quality</option>
+                      <option value="Excellent">🟢 Excellent</option>
+                      <option value="Good">🟡 Good</option>
+                      <option value="Acceptable">🟠 Acceptable</option>
+                      <option value="Poor">🔴 Poor</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Rework Required</label>
+                    <select className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-600 focus:outline-none">
+                      <option value="">Select Status</option>
+                      <option value="No Rework">No Rework Required</option>
+                      <option value="Minor Rework">Minor Rework Required</option>
+                      <option value="Major Rework">Major Rework Required</option>
+                    </select>
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Quality Issues</label>
+                  <textarea 
+                    placeholder="Quality problems and corrective actions..."
+                    rows={2}
+                    className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-600 focus:outline-none resize-none"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Report Tab */}
+        {activeTab === 'report' && (
+          <div className="space-y-4">
+            <div className="bg-white rounded-xl p-5 shadow-lg border border-gray-200">
+              <h3 className="text-lg font-bold text-blue-800 mb-4">📊 Daily Summary</h3>
+              <div className="grid grid-cols-2 gap-4 mb-5">
+                <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-lg text-center border border-blue-200">
+                  <div className="text-2xl font-bold text-blue-800 mb-1">{dailyActivities.length}</div>
+                  <div className="text-xs text-blue-800 font-semibold">Activities</div>
+                </div>
+                <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-lg text-center border border-blue-200">
+                  <div className="text-2xl font-bold text-blue-800 mb-1">{totalWorkers}</div>
+                  <div className="text-xs text-blue-800 font-semibold">Workers</div>
+                </div>
+                <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-lg text-center border border-blue-200">
+                  <div className="text-2xl font-bold text-blue-800 mb-1">{activeContractors}</div>
+                  <div className="text-xs text-blue-800 font-semibold">Contractors</div>
+                </div>
+                <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-lg text-center border border-blue-200">
+                  <div className="text-2xl font-bold text-blue-800 mb-1">{Math.round(totalHours * 10) / 10}</div>
+                  <div className="text-xs text-blue-800 font-semibold">Work Hours</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl p-5 shadow-lg border border-gray-200">
+              <h3 className="text-lg font-bold text-blue-800 mb-4">📝 Activities Review</h3>
+              <div>
+                {dailyActivities.length === 0 ? (
+                  <div className="text-center py-10 text-gray-500">
+                    <div className="text-4xl mb-4">📝</div>
+                    <p>No activities recorded yet.<br />Add activities in the Activity tab first.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {dailyActivities.map((activity, index) => (
+                      <div key={activity.id} className="bg-gray-50 border-2 border-gray-200 rounded-xl p-4 relative">
+                        <div className="flex justify-between items-center mb-3">
+                          <div className="bg-blue-800 text-white px-2 py-1 rounded text-xs font-semibold">
+                            {activity.startTime}{activity.endTime ? ` - ${activity.endTime}` : ''}
+                          </div>
+                          <button 
+                            onClick={() => deleteActivity(index)}
+                            className="bg-red-600 text-white px-2 py-1 rounded text-xs"
+                          >
+                            🗑️
+                          </button>
+                        </div>
+                        <div className="text-sm space-y-1">
+                          <div><strong>📍</strong> {activity.location}{activity.specificArea ? ` - ${activity.specificArea}` : ''}</div>
+                          <div><strong>👷</strong> {activity.contractor}</div>
+                          <div><strong>🔧</strong> {activity.workCategory}{activity.workType ? ` - ${activity.workType}` : ''}</div>
+                          {activity.workDescription && <div><strong>📝</strong> {activity.workDescription}</div>}
+                          {activity.workerCount && <div><strong>👥</strong> {activity.workerCount} workers</div>}
+                          {activity.materialType && <div><strong>📦</strong> {activity.materialType}</div>}
+                          {activity.workStatus && <div><strong>📊</strong> {activity.workStatus}</div>}
+                          {activity.equipmentUsed && <div><strong>🔧</strong> {activity.equipmentUsed} {activity.equipmentCount ? `(${activity.equipmentCount})` : ''}</div>}
+                          {(activity.photos[1] || activity.photos[2]) && (
+                            <div className="flex gap-2 mt-3">
+                              {activity.photos[1] && (
+                                <img src={activity.photos[1].data} alt="Photo 1" className="w-16 h-16 object-cover rounded" />
+                              )}
+                              {activity.photos[2] && (
+                                <img src={activity.photos[2].data} alt="Photo 2" className="w-16 h-16 object-cover rounded" />
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl p-5 shadow-lg border border-gray-200">
+              <h3 className="text-lg font-bold text-blue-800 mb-4">📤 Export Report</h3>
+              <div className="space-y-3">
+                <button 
+                  onClick={downloadCSV}
+                  disabled={dailyActivities.length === 0}
+                  className={`w-full p-4 rounded-lg font-semibold ${
+                    dailyActivities.length === 0 
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
+                      : 'bg-green-600 text-white hover:bg-green-700'
+                  }`}
+                >
+                  ⬇️ Download CSV Report
+                </button>
+                
+                <div className="text-center text-sm text-gray-600">
+                  {dailyActivities.length === 0 ? 'Add activities to enable export' : 'Ready to export'}
+                </div>
+                
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-blue-800 text-sm">
+                  <strong>💡 How to use:</strong><br />
+                  1. Download CSV file to your phone<br />
+                  2. Share via WhatsApp/Email to your computer<br />
+                  3. Open in Excel for further processing
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default DailySiteReport;
